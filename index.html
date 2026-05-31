@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quà 1/6 </title>
+    <style>
+        /* ================= BỐ CỤC CHUNG & NỀN ĐEN ================= */
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #000000; 
+            color: white; 
+            font-family: 'Times New Roman', serif; 
+        }
+
+        .stars {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 90px 40px, #ff69b4, rgba(0,0,0,0)), 
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.6), rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 250px 250px;
+            animation: twinkle 5s infinite alternate;
+            opacity: 0.5;
+        }
+
+        @keyframes twinkle {
+            0% { opacity: 0.2; transform: scale(1); }
+            100% { opacity: 0.7; transform: scale(1.02); }
+        }
+        
+        .scene { 
+            position: absolute; 
+            top: 0; left: 0; 
+            width: 100vw; height: 100vh; 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 10;
+        }
+        
+        .active { display: flex; animation: fadeIn 1s ease-in-out; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .instruction { 
+            position: absolute; 
+            bottom: 40px; 
+            width: 100%; 
+            text-align: center; 
+            font-size: 15px; 
+            color: #ff69b4; 
+            letter-spacing: 2px;
+            z-index: 20; 
+            pointer-events: none;
+            animation: pulse 2s infinite;
+            text-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        #canvas-container { cursor: pointer; }
+
+        /* ================= SCENE 2: QUẢ CẦU 3D ================= */
+        #sphere-container { perspective: 1200px; cursor: pointer; }
+        
+        .sphere { 
+            position: relative; 
+            width: 0; height: 0;
+            transform-style: preserve-3d; 
+            animation: rotateSphere 25s infinite linear; 
+        }
+        
+        .sphere img { 
+            position: absolute; 
+            width: 140px; height: 140px; 
+            object-fit: cover; 
+            border-radius: 12px; 
+            border: 2px solid rgba(255, 105, 180, 0.4); 
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.3), inset 0 0 10px rgba(0,0,0,0.5); 
+            margin-top: -70px; margin-left: -70px; 
+            backface-visibility: visible;
+            cursor: zoom-in;
+        }
+        
+        @keyframes rotateSphere { 
+            from { transform: rotateX(10deg) rotateY(0deg); } 
+            to { transform: rotateX(10deg) rotateY(360deg); } 
+        }
+
+        /* ================= HIỆU ỨNG ZOOM ẢNH ================= */
+        .lightbox {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .lightbox.active { display: flex; opacity: 1; }
+        
+        .lightbox img {
+            max-width: 90vw;
+            max-height: 85vh;
+            border-radius: 12px;
+            border: 2px solid #ff69b4; 
+            box-shadow: 0 0 40px rgba(255, 105, 180, 0.5);
+            transform: scale(0.8);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            object-fit: contain;
+        }
+        
+        .lightbox.active img { transform: scale(1); }
+        
+        .lightbox .close-btn {
+            position: absolute;
+            top: 25px;
+            right: 35px;
+            color: #ff69b4; 
+            font-size: 40px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: transform 0.2s;
+        }
+        .lightbox .close-btn:hover { transform: scale(1.2); }
+
+        /* ================= SCENE 3: PHONG BÌ & LÁ THƯ CO GIÃN ================= */
+        .envelope-wrapper { 
+            position: relative; 
+            cursor: pointer; 
+            transition: transform 0.3s;
+        }
+        .envelope-wrapper:hover { transform: scale(1.02); }
+        
+        .envelope { 
+            width: 380px; height: 260px; 
+            background: #0a0a0a; 
+            position: relative; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9), 0 0 20px rgba(255, 105, 180, 0.15); 
+            transition: background 0.5s ease, box-shadow 0.5s ease;
+        }
+        
+        .flap-back, .flap-top, .flap-bottom, .flap-left, .flap-right {
+            transition: opacity 0.4s ease, transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .flap-back { position: absolute; width: 100%; height: 100%; background: #000; z-index: 1; }
+        
+        .flap-top {
+            position: absolute; top: 0; left: 0; width: 100%; height: 60%;
+            background: #1a1a1a; 
+            clip-path: polygon(0 0, 100% 0, 50% 100%);
+            transform-origin: top; 
+            z-index: 6; 
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.8));
+        }
+        
+        .flap-bottom {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 65%;
+            background: #111; 
+            clip-path: polygon(0 100%, 100% 100%, 50% 0); 
+            z-index: 5; 
+        }
+        
+        .flap-left {
+            position: absolute; top: 0; left: 0; width: 55%; height: 100%;
+            background: #151515; 
+            clip-path: polygon(0 0, 100% 50%, 0 100%); 
+            z-index: 4; 
+        }
+        
+        .flap-right {
+            position: absolute; top: 0; right: 0; width: 55%; height: 100%;
+            background: #151515; 
+            clip-path: polygon(100% 0, 0 50%, 100% 100%); 
+            z-index: 4; 
+        }
+
+        .envelope::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border: 1px solid #ff69b4; 
+            pointer-events: none; z-index: 7; box-sizing: border-box;
+            transition: opacity 0.4s ease;
+        }
+        
+        .envelope-wrapper.open .envelope { 
+            background: transparent; 
+            box-shadow: none; 
+            transition: background 0.5s ease 0.3s, box-shadow 0.5s ease 0.3s;
+        }
+        
+        .envelope-wrapper.open .flap-back,
+        .envelope-wrapper.open .flap-bottom,
+        .envelope-wrapper.open .flap-left,
+        .envelope-wrapper.open .flap-right,
+        .envelope-wrapper.open .envelope::after {
+            opacity: 0; transition: opacity 0.5s ease 0.3s; 
+        }
+
+        .envelope-wrapper.open .flap-top { 
+            transform: rotateX(180deg); 
+            opacity: 0; 
+            transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease 0.3s;
+            z-index: 1; 
+        }
+        
+        /* --- CẤU HÌNH LÁ THƯ CO GIÃN THÔNG MINH --- */
+        .letter { 
+            position: absolute; 
+            bottom: 5px; /* Giữ đáy cố định để thư nở tung lên trên */
+            left: 10px; right: 10px; 
+            height: max-content; /* Chiều cao tự dãn theo chữ */
+            min-height: 240px;
+            max-height: 240px; /* Khi nằm trong bao thư thì bị giới hạn */
+            overflow: hidden; /* Cắt bớt phần chữ dư khi thư đóng */
+            background: rgba(20, 20, 20, 0.95); 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 105, 180, 0.5); 
+            border-radius: 8px; 
+            padding: 25px 20px; 
+            transition: max-height 0.6s ease, transform 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.1s, box-shadow 0.5s ease, z-index 0s 0.2s; 
+            z-index: 2; 
+            color: #fffdf2; 
+            text-align: center; 
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        /* Tùy chỉnh thanh cuộn cho lá thư (Scrollbar) */
+        .letter::-webkit-scrollbar { width: 4px; }
+        .letter::-webkit-scrollbar-thumb { background: #ff69b4; border-radius: 4px; }
+        .letter::-webkit-scrollbar-track { background: transparent; }
+        
+        .envelope-wrapper.open .letter { 
+            max-height: 600px; /* Bung chiều cao lên hết cỡ để hiện toàn bộ chữ */
+            overflow-y: auto; /* Nếu dài quá 600px thì hiện thanh cuộn */
+            transform: translateY(-60px) scale(1.05); /* Ít dịch chuyển lên hơn vì thư đã tự dài ra */
+            z-index: 10;
+            box-shadow: 0 10px 40px rgba(0,0,0,1), 0 0 30px rgba(255, 105, 180, 0.3); 
+            transition: max-height 0.8s ease, transform 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.1s, box-shadow 0.5s ease 0.3s, z-index 0s 0s;
+        }
+
+        .letter h3 { color: #ff69b4; margin: 0 0 10px 0; font-size: 24px; font-weight: bold; border-bottom: 1px solid #ff69b4; padding-bottom: 5px;}
+        .letter p.date { font-size: 15px; color: #aaa; margin-bottom: 15px; font-style: italic;}
+        .letter p.content { 
+            font-size: 16px; 
+            line-height: 1.6; 
+            font-style: italic; 
+            text-align: justify; /* Căn đều 2 bên cho dễ đọc khi chữ dài */
+            padding-bottom: 10px;
+        }
+
+        /* ================= TƯƠNG THÍCH THIẾT BỊ (RESPONSIVE) ================= */
+        @media (max-width: 768px) {
+            .sphere img { width: 100px; height: 100px; margin-top: -50px; margin-left: -50px; }
+            .envelope { width: 340px; height: 230px; }
+            .letter { min-height: 210px; max-height: 210px; padding: 20px 15px; }
+            .envelope-wrapper.open .letter { max-height: 550px; transform: translateY(-50px) scale(1.05); }
+            .lightbox .close-btn { right: 20px; top: 15px; font-size: 35px; }
+        }
+
+        @media (max-width: 480px) {
+            .instruction { font-size: 12px; bottom: 30px; }
+            .sphere img { width: 80px; height: 80px; margin-top: -40px; margin-left: -40px; border-radius: 8px;}
+            .envelope { width: 320px; height: 210px; }
+            
+            /* Điều chỉnh lá thư trên màn hình điện thoại */
+            .letter { min-height: 195px; max-height: 195px; padding: 15px 12px; }
+            .envelope-wrapper.open .letter { 
+                max-height: 75vh; /* Khống chế không cho thư cao vượt quá màn hình điện thoại */
+                transform: translateY(-40px) scale(1.02); 
+            }
+            
+            .letter h3 { font-size: 20px; }
+            .letter p.date { font-size: 13px; margin-bottom: 10px;}
+            .letter p.content { font-size: 14.5px; line-height: 1.5; }
+        }
+
+        @media (max-width: 340px) {
+            .envelope { width: 280px; height: 180px; }
+            .letter { min-height: 165px; max-height: 165px; padding: 10px; }
+            .envelope-wrapper.open .letter { max-height: 70vh; transform: translateY(-30px) scale(1.02); }
+            .letter h3 { font-size: 17px; margin-bottom: 5px; }
+            .letter p.content { font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="instruction" id="instruction">Chạm/Click vào màn hình để tiếp tục</div>
+
+    <div id="lightbox" class="lightbox">
+        <span class="close-btn" id="close-lightbox">&times;</span>
+        <img id="lightbox-img" src="" alt="Zoom">
+    </div>
+
+    <div id="scene1" class="scene active">
+        <canvas id="particleCanvas"></canvas>
+    </div>
+
+    <div id="scene2" class="scene">
+        <div id="sphere-container">
+            <div class="sphere" id="sphere"></div>
+        </div>
+    </div>
+
+    <div id="scene3" class="scene">
+        <div class="envelope-wrapper" id="envelope">
+            <div class="envelope">
+                <div class="flap-back"></div>
+                <div class="letter">
+                    <h3>Gửi Chị</h3>
+                    <p class="date">Ngày 01 Tháng 06 Năm 2026</p>
+                    <p class="content" id="wish-content">Đang tải lời chúc...</p>
+                </div>
+                <div class="flap-left"></div>
+                <div class="flap-right"></div>
+                <div class="flap-bottom"></div>
+                <div class="flap-top"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CẬP NHẬT 5 LỜI CHÚC MỚI DÀNH CHO CHỊ GÁI
+        // ==========================================
+        const wishes = [
+            "Nhân ngày Quốc tế Thiếu nhi 1/6, em chúc chị có được tất cả mọi thứ trên đời này: có sức khỏe, có niềm vui, có tiền tài, có hạnh phúc, và đặc biệt là trừ đi mọi sự vất vả nhé! Dù ngoài kia làm người lớn có mệt mỏi, áp lực hay sóng gió thế nào, thì em mong khi về nhà, chị vẫn luôn được bình yên, thảnh thơi và được chở che như một đứa trẻ không bao giờ phải lo nghĩ. Chúc chị một ngày lễ thật ấm áp và nhẹ nhàng!",
+            
+            "Alo alo, thông báo khẩn cấp từ tổng đài thiếu nhi! Chúc người chị tuy giao diện đã trưởng thành nhưng hệ điều hành vẫn còn đam mê chơi đồ hàng có một ngày 1/6 thật bùng nổ nha! Chúc chị hôm nay thu hoạch được nhiều quà, đi ăn đi chơi không lo nhìn giá và quan trọng là bớt 'bắt nạt' em lại để đúng chuẩn bé ngoan. Ai nói lớn rồi không được đòi quà, nay chị cứ mạnh dạn đi đòi đi nhé, nhưng đòi ai thì em không chịu trách nhiệm đâu nha!",
+            
+            "Ngày 1/6 không chỉ dành cho trẻ nhỏ, mà còn là dịp để chúng ta nhớ về những phần trong trẻo nhất của bản thân mình. Nhân dịp này, em gửi đến chị những lời chúc chân thành nhất. Chúc chị luôn giữ được sự vững vàng, tự tin trong công việc và cuộc sống. Mong chị luôn có đủ sức khỏe, giữ được sự bình an trong tâm hồn, gặt hái được mọi mục tiêu đã đề ra và luôn được những người xung quanh yêu thương, trân trọng.",
+            
+            "Chúc mừng 1/6 người chị 'slay' nhất hệ mặt trời của em! Chúc chị mãi luôn keo lỳ, mười điểm không có nhưng, đi làm thì luôn mượt mà out trình deadline, cuối tuần thì luôn có cạ 'chữa lành' (healing). Mong chị bớt overthinking, tài khoản ngân hàng thì lúc nào cũng ting ting để còn flex với đời. Dù chị có đang làm người lớn bận rộn đi chăng nữa thì hôm nay cứ mạnh dạn bật mode thiếu nhi để chill hết nấc nha!",
+            
+            "Cuối cùng, nhân ngày của các bé, em chỉ muốn nói là dù cuộc sống đôi khi bắt mình phải gồng gánh nhiều thứ, chị cứ cho phép bản thân được yếu đuối và nhõng nhẽo một chút cũng không sao đâu. Chúc chị 1/6 ngập tràn tiếng cười, ăn ngon ngủ kỹ, không bị rớt những nụ cười tươi trên môi. Cứ vô tư, hồn nhiên và tận hưởng cuộc sống theo cách của riêng mình chị nhé, vì lúc chị vui vẻ thoải mái nhất cũng là lúc chị tuyệt vời nhất đấy!"
+        ];
+
+        let availableWishes = [...wishes];
+
+        function getRandomWish() {
+            if (availableWishes.length === 0) {
+                availableWishes = [...wishes]; 
+            }
+            const randomIndex = Math.floor(Math.random() * availableWishes.length);
+            const wish = availableWishes[randomIndex];
+            availableWishes.splice(randomIndex, 1); 
+            return wish;
+        }
+
+        let currentScene = 1;
+        let isEnvelopeOpen = false;
+
+        document.body.addEventListener('click', (e) => {
+            if (document.getElementById('lightbox').classList.contains('active')) return;
+
+            if (currentScene === 1 && phase === 'text') {
+                document.getElementById('scene1').classList.remove('active');
+                document.getElementById('scene2').classList.add('active');
+                currentScene = 2;
+                document.getElementById('instruction').innerText = "Chạm vào ảnh để xem hoặc chạm ra ngoài để tiếp tục";
+                
+                if (currentImages.length > 0) drawSphere(currentImages); 
+                
+            } else if (currentScene === 2) {
+                document.getElementById('scene2').classList.remove('active');
+                document.getElementById('scene3').classList.add('active');
+                currentScene = 3;
+                document.getElementById('instruction').innerText = "Chạm vào lá thư để mở/đóng";
+            }
+        });
+
+        // Đóng/mở thư & reset
+        document.getElementById('envelope').addEventListener('click', function(e) {
+            e.stopPropagation(); 
+            isEnvelopeOpen = !isEnvelopeOpen;
+            
+            if (isEnvelopeOpen) {
+                // Load nội dung mới trước khi lá thư bung lên
+                const letterContent = document.getElementById('wish-content');
+                letterContent.innerText = getRandomWish();
+                
+                // Cuộn lá thư lên đầu (phòng trường hợp câu trước quá dài bị cuộn xuống)
+                document.querySelector('.letter').scrollTop = 0;
+                
+                this.classList.add('open');
+                document.getElementById('instruction').style.display = 'none';
+            } else {
+                this.classList.remove('open');
+                setTimeout(() => { 
+                    document.getElementById('scene3').classList.remove('active');
+                    document.getElementById('scene1').classList.add('active');
+                    currentScene = 1;
+                    document.getElementById('instruction').style.display = 'block';
+                    document.getElementById('instruction').innerText = "Chạm/Click vào màn hình để tiếp tục";
+                    phase = 'heart';
+                    initParticles();
+                }, 1000);
+            }
+        });
+
+        // Zoom ẢNH
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        
+        lightbox.addEventListener('click', function(e) {
+            e.stopPropagation(); 
+            this.classList.remove('active');
+        });
+
+        // ==========================================
+        // SCENE 1: TRÁI TIM 2D MÀU HỒNG ĐẬP
+        // ==========================================
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        let particles = [];
+        let phase = 'heart'; 
+        let phaseTimeout;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if(particles.length > 0) initParticles();
+        }
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if(currentScene === 2 && currentImages.length > 0) drawSphere(currentImages); 
+        });
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        function getTextPoints() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
+            const tCtx = tempCanvas.getContext('2d');
+            
+            const isMobile = canvas.width < 600;
+            const fontSize = isMobile ? Math.min(canvas.width / 8, 40) : Math.min(canvas.width / 10, 60);
+            
+            tCtx.font = `bold ${fontSize}px "Times New Roman", serif`;
+            tCtx.fillStyle = 'white';
+            tCtx.textAlign = 'center';
+            tCtx.textBaseline = 'middle';
+            
+            if(isMobile) {
+                tCtx.fillText("Chúc mừng", canvas.width/2, canvas.height/2 - fontSize);
+                tCtx.fillText("Quốc Tế", canvas.width/2, canvas.height/2);
+                tCtx.fillText("Thiếu Nhi", canvas.width/2, canvas.height/2 + fontSize);
+            } else {
+                tCtx.fillText("Chúc mừng", canvas.width/2, canvas.height/2 - fontSize/1.2);
+                tCtx.fillText("Quốc Tế Thiếu Nhi", canvas.width/2, canvas.height/2 + fontSize/1.2);
+            }
+
+            const data = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+            const points = [];
+            const step = Math.floor(canvas.width > 800 ? 3 : 2); 
+            
+            for (let y = 0; y < tempCanvas.height; y += step) {
+                for (let x = 0; x < tempCanvas.width; x += step) {
+                    if (data[(y * tempCanvas.width + x) * 4 + 3] > 128) {
+                        points.push({ x, y });
+                    }
+                }
+            }
+            return points;
+        }
+
+        function getHeartPoints(count) {
+            const points = [];
+            const isMobile = canvas.width < 600;
+            const scale = isMobile ? (canvas.width / 30) : (Math.min(canvas.width, canvas.height) / 40); 
+            const offsetX = canvas.width / 2;
+            const offsetY = canvas.height / 2;
+
+            for (let i = 0; i < count; i++) {
+                const t = Math.PI * 2 * (i / count);
+                const x = 16 * Math.pow(Math.sin(t), 3);
+                const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                
+                const rx = (Math.random() - 0.5) * (isMobile ? 5 : 10);
+                const ry = (Math.random() - 0.5) * (isMobile ? 5 : 10);
+
+                points.push({ x: offsetX + x * scale + rx, y: offsetY - y * scale + ry });
+            }
+            return points;
+        }
+
+        function initParticles() {
+            const textPoints = getTextPoints();
+            const numParticles = textPoints.length;
+            const heartPoints = getHeartPoints(numParticles);
+
+            particles = [];
+            for (let i = 0; i < numParticles; i++) {
+                const pinkHue = 330 + Math.random() * 20; 
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    heartX: heartPoints[i].x,
+                    heartY: heartPoints[i].y,
+                    textX: textPoints[i].x,
+                    textY: textPoints[i].y,
+                    size: Math.random() * 1.5 + 0.5,
+                    color: `hsl(${pinkHue}, 90%, ${60 + Math.random()*20}%)` 
+                });
+            }
+
+            clearTimeout(phaseTimeout);
+            phaseTimeout = setTimeout(() => { phase = 'text'; }, 4000); 
+        }
+
+        function animateParticles() {
+            if (currentScene !== 1) return requestAnimationFrame(animateParticles);
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const pulse = phase === 'heart' ? Math.sin(Date.now() / 300) * 0.03 + 1 : 1;
+
+            particles.forEach(p => {
+                const targetX = phase === 'heart' ? canvas.width/2 + (p.heartX - canvas.width/2) * pulse : p.textX;
+                const targetY = phase === 'heart' ? canvas.height/2 + (p.heartY - canvas.height/2) * pulse : p.textY;
+
+                p.x += (targetX - p.x) * 0.05;
+                p.y += (targetY - p.y) * 0.05;
+                
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            requestAnimationFrame(animateParticles);
+        }
+
+        setTimeout(() => {
+            initParticles();
+            animateParticles();
+        }, 500);
+
+        // ==========================================
+        // SCENE 2: ĐẾM ẢNH & QUẢ CẦU
+        // ==========================================
+        const sphere = document.getElementById('sphere');
+        let currentImages = [];
+        let imageIndex = 1;
+
+        function autoDetectImages() {
+            const tempImg = new Image();
+            tempImg.src = `img/${imageIndex}.jpg`;
+            
+            tempImg.onload = function() {
+                currentImages.push(tempImg.src);
+                imageIndex++;
+                autoDetectImages(); 
+            };
+            
+            tempImg.onerror = function() {
+                if (currentImages.length > 0) {
+                    drawSphere(currentImages);
+                }
+            };
+        }
+
+        autoDetectImages();
+
+        function drawSphere(imageUrls) {
+            sphere.innerHTML = ''; 
+            const numImages = imageUrls.length;
+            
+            let radius = 220; 
+            if(window.innerWidth <= 480) radius = 110;      
+            else if(window.innerWidth <= 768) radius = 160; 
+            
+            imageUrls.forEach((src, i) => {
+                const imgEl = document.createElement('img');
+                imgEl.src = src;
+                
+                imgEl.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    lightboxImg.src = this.src;
+                    lightbox.classList.add('active');
+                });
+                
+                const phi = Math.acos(-1 + (2 * i) / numImages);
+                const theta = Math.sqrt(numImages * Math.PI) * phi;
+                
+                const x = radius * Math.cos(theta) * Math.sin(phi);
+                const y = radius * Math.sin(theta) * Math.sin(phi);
+                const z = radius * Math.cos(phi);
+                
+                imgEl.style.transform = `translate3d(${x}px, ${y}px, ${z}px) rotateY(${theta}rad) rotateX(${phi - Math.PI/2}rad)`;
+                sphere.appendChild(imgEl);
+            });
+        }
+    </script>
+</body>
+</html>
